@@ -215,6 +215,45 @@ app.get("/", async (req, res) => {
   `);
 });
 
+app.get("/api/generate", async (req, res) => {
+    try {
+        const pool = await getPool();
+
+        const temperature = (20 + Math.random() * 8).toFixed(1);
+        const humidity = (40 + Math.random() * 30).toFixed(1);
+        const battery = Math.floor(70 + Math.random() * 30);
+        const signal = Math.floor(80 + Math.random() * 20);
+
+        await pool.request()
+            .input("temperature", sql.Decimal(5, 2), temperature)
+            .input("humidity", sql.Decimal(5, 2), humidity)
+            .input("battery", sql.Int, battery)
+            .input("signal_strength", sql.Int, signal)
+            .query(`
+                INSERT INTO telemetry
+                (temperature, humidity, battery, signal_strength)
+                VALUES
+                (@temperature, @humidity, @battery, @signal_strength)
+            `);
+
+        res.json({
+            status: "created",
+            message: "New telemetry measurement generated",
+            telemetry: {
+                temperature,
+                humidity,
+                battery,
+                signal_strength: signal
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: "error",
+            message: error.message
+        });
+    }
+});
+
 app.get("/health", async (req, res) => {
     let database = "connected";
 
