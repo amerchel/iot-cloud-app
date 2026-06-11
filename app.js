@@ -45,9 +45,9 @@ async function getTelemetryFromDatabase() {
         SELECT TOP 1
             temperature,
             humidity,
-            battery,
-            signal_strength,
-            measured_at
+               battery,
+               signal_strength,
+               measured_at
         FROM telemetry
         ORDER BY measured_at DESC
     `);
@@ -207,9 +207,23 @@ app.get("/", async (req, res) => {
           </div>
 
           <div class="footer">
-            Ostatnia aktualizacja dashboardu: ${date}
+            Ostatnia aktualizacja dashboardu: ${date}<br>
+            Nowy pomiar IoT jest automatycznie generowany co 10 sekund.
           </div>
         </div>
+
+        <script>
+          async function refreshTelemetry() {
+            try {
+              await fetch("/api/generate");
+              location.reload();
+            } catch (error) {
+              console.error("Telemetry refresh error:", error);
+            }
+          }
+
+          setInterval(refreshTelemetry, 10000);
+        </script>
       </body>
     </html>
   `);
@@ -231,9 +245,9 @@ app.get("/api/generate", async (req, res) => {
             .input("signal_strength", sql.Int, signal)
             .query(`
                 INSERT INTO telemetry
-                (temperature, humidity, battery, signal_strength)
+                    (temperature, humidity, battery, signal_strength)
                 VALUES
-                (@temperature, @humidity, @battery, @signal_strength)
+                    (@temperature, @humidity, @battery, @signal_strength)
             `);
 
         res.json({
