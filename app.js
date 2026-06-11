@@ -40,7 +40,7 @@ app.get("/", (req, res) => {
       </head>
       <body>
         <div class="card">
-          <h1>IoT Temperature Monitor - test </h1>
+          <h1>IoT Temperature Monitor - webhook </h1>
           <p>Symulowany dashboard urządzenia IoT</p>
           <div class="value">🌡️ Temperatura: ${temperature} °C</div>
           <div class="value">💧 Wilgotność: ${humidity} %</div>
