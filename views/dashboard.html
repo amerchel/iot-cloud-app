@@ -1,0 +1,64 @@
+<html>
+<head>
+    <title>IoT Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+<div class="container">
+    <h1>IoT Dashboard stacji pogodowej</h1>
+
+    <div class="subtitle">
+        Azure App Service • Docker • ACR • GitHub Actions • Webhook CD • Azure SQL
+    </div>
+
+    <div class="status">
+        ● Device ONLINE
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="label">🌡️ Temperatura</div>
+            <div class="value">{{temperature}} °C</div>
+        </div>
+
+        <div class="card">
+            <div class="label">💧 Wilgotność</div>
+            <div class="value">{{humidity}} %</div>
+        </div>
+
+        <div class="card">
+            <div class="label">🔋 Bateria</div>
+            <div class="value">{{battery}}%</div>
+        </div>
+
+        <div class="card">
+            <div class="label">📶 Sygnał</div>
+            <div class="value">{{signal}}%</div>
+        </div>
+    </div>
+
+    <div class="source">
+        Źródło danych: {{source}}
+    </div>
+
+    <div class="footer">
+        Ostatnia aktualizacja dashboardu: {{date}}<br>
+        Nowy pomiar IoT jest automatycznie generowany co 10 sekund.
+    </div>
+</div>
+
+<script>
+    async function refreshTelemetry() {
+        try {
+            await fetch("/api/generate");
+            location.reload();
+        } catch (error) {
+            console.error("Telemetry refresh error:", error);
+        }
+    }
+
+    setInterval(refreshTelemetry, 10000);
+</script>
+</body>
+</html>

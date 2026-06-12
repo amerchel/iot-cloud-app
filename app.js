@@ -1,8 +1,12 @@
 const express = require("express");
 const sql = require("mssql");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+app.use(express.static("public"));
 
 const dbConfig = {
     server: process.env.DB_SERVER,
@@ -45,9 +49,9 @@ async function getTelemetryFromDatabase() {
         SELECT TOP 1
             temperature,
             humidity,
-               battery,
-               signal_strength,
-               measured_at
+            battery,
+            signal_strength,
+            measured_at
         FROM telemetry
         ORDER BY measured_at DESC
     `);
@@ -69,6 +73,20 @@ function getFallbackTelemetry() {
     };
 }
 
+function renderDashboard(data) {
+    const htmlPath = path.join(__dirname, "views", "dashboard.html");
+
+    let html = fs.readFileSync(htmlPath, "utf8");
+
+    return html
+        .replaceAll("{{temperature}}", Number(data.telemetry.temperature).toFixed(1))
+        .replaceAll("{{humidity}}", Number(data.telemetry.humidity).toFixed(1))
+        .replaceAll("{{battery}}", Number(data.telemetry.battery).toFixed(0))
+        .replaceAll("{{signal}}", Number(data.telemetry.signal_strength).toFixed(0))
+        .replaceAll("{{source}}", data.source)
+        .replaceAll("{{date}}", data.date);
+}
+
 app.get("/", async (req, res) => {
     let telemetry;
     let source = "Azure SQL Database";
@@ -85,148 +103,13 @@ app.get("/", async (req, res) => {
         timeZone: "Europe/Warsaw"
     });
 
-    res.send(`
-    <html>
-      <head>
-        <title>IoT Dashboard</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(180deg, #0f172a, #020617);
-            color: white;
-            margin: 0;
-            padding: 60px 20px;
-          }
+    const html = renderDashboard({
+        telemetry,
+        source,
+        date
+    });
 
-          .container {
-            max-width: 900px;
-            margin: auto;
-            text-align: center;
-          }
-
-          h1 {
-            color: #38bdf8;
-            margin-bottom: 5px;
-          }
-
-          .subtitle {
-            color: #94a3b8;
-            margin-bottom: 30px;
-          }
-
-          .status {
-            display: inline-block;
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            padding: 8px 14px;
-            border-radius: 999px;
-            margin-bottom: 25px;
-            font-weight: bold;
-          }
-
-          .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-          }
-
-          .card {
-            background: #1e293b;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-          }
-
-          .label {
-            color: #94a3b8;
-            font-size: 14px;
-            margin-bottom: 10px;
-          }
-
-          .value {
-            font-size: 32px;
-            font-weight: bold;
-          }
-
-          .source {
-            margin-top: 18px;
-            color: #38bdf8;
-            font-size: 14px;
-          }
-
-          .footer {
-            margin-top: 30px;
-            color: #94a3b8;
-            font-size: 12px;
-          }
-
-          @media (max-width: 600px) {
-            .grid {
-              grid-template-columns: 1fr;
-            }
-          }
-        </style>
-      </head>
-
-      <body>
-        <div class="container">
-          <h1>IoT Temperature Monitor</h1>
-
-          <div class="subtitle">
-            Azure App Service • Docker • ACR • GitHub Actions • Webhook CD • Azure SQL
-          </div>
-
-          <div class="status">
-            ● Device ONLINE
-          </div>
-
-          <div class="grid">
-            <div class="card">
-              <div class="label">🌡️ Temperatura</div>
-              <div class="value">${Number(telemetry.temperature).toFixed(1)} °C</div>
-            </div>
-
-            <div class="card">
-              <div class="label">💧 Wilgotność</div>
-              <div class="value">${Number(telemetry.humidity).toFixed(1)} %</div>
-            </div>
-
-            <div class="card">
-              <div class="label">🔋 Bateria</div>
-              <div class="value">${Number(telemetry.battery).toFixed(0)}%</div>
-            </div>
-
-            <div class="card">
-              <div class="label">📶 Sygnał</div>
-              <div class="value">${Number(telemetry.signal_strength).toFixed(0)}%</div>
-            </div>
-          </div>
-
-          <div class="source">
-            Źródło danych: ${source}
-          </div>
-
-          <div class="footer">
-            Ostatnia aktualizacja dashboardu: ${date}<br>
-            Nowy pomiar IoT jest automatycznie generowany co 10 sekund.
-          </div>
-        </div>
-
-        <script>
-          async function refreshTelemetry() {
-            try {
-              await fetch("/api/generate");
-              location.reload();
-            } catch (error) {
-              console.error("Telemetry refresh error:", error);
-            }
-          }
-
-          setInterval(refreshTelemetry, 10000);
-        </script>
-      </body>
-    </html>
-  `);
+    res.send(html);
 });
 
 app.get("/api/generate", async (req, res) => {
